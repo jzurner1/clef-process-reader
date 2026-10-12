@@ -43,7 +43,7 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 	svc = svcRaw.ToIDispatch()
 	defer svc.Release()
 
-	// Seed the name cache with processes that are already running.
+	// seed name cache with processes that are already running
 	query("SELECT ProcessId, Name FROM Win32_Process", func(row *ole.IDispatch) {
 		v, err := oleutil.GetProperty(row, "ProcessId")
 		if err == nil {
@@ -59,6 +59,22 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 	}
 	src := srcRaw.ToIDispatch()
 	defer src.Release()
+
+	const workerCount = 4
+	events := make(chan api.ProcessDetails, 64)
+
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for d := range events {
+				res, err := api.GetClefOpinion(ctx, d, auth)
+				if err != nil {
+					slog.WarnContext(ctx, "failed to get clef opinion", "err", err)
+					continue
+				}
+				printProcessDetails(ctx, d, res)
+			}
+		}()
+	}
 
 	fmt.Println("Listening for new processes...")
 	for {
@@ -98,13 +114,7 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 			Cmdline: cmdline,
 		}
 
-		res, err := api.GetClefOpinion(ctx, details, auth)
-		if err != nil {
-			slog.WarnContext(ctx, "failed to get clef opinion", "err", err)
-			evRaw.Clear()
-			continue
-		}
-		printProcessDetails(ctx, details, res)
+		events <- details
 
 		evRaw.Clear()
 	}
