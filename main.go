@@ -14,6 +14,7 @@ func main() {
 	auth, err := utils.GetAuth()
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to get auth", "err", err)
+		return
 	}
 
 	StartListener(ctx, *auth)

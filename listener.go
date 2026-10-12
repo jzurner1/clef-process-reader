@@ -87,6 +87,7 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 
 		if cmdline == "" || path == "" {
 			slog.WarnContext(ctx, "empty process")
+			evRaw.Clear()
 			continue
 		}
 
@@ -100,6 +101,7 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 		res, err := api.GetClefOpinion(ctx, details, auth)
 		if err != nil {
 			slog.WarnContext(ctx, "failed to get clef opinion", "err", err)
+			evRaw.Clear()
 			continue
 		}
 		printProcessDetails(ctx, details, res)
@@ -110,7 +112,7 @@ func StartListener(ctx context.Context, auth utils.AuthDetails) {
 
 var (
 	svc   *ole.IDispatch
-	names = map[uint32]string{} // pid -> process name, used for parent lookups
+	names = map[uint32]string{} // maps pid to process name, used for parent lookups
 )
 
 func str(v *ole.VARIANT) string {
